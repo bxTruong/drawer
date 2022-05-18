@@ -1,11 +1,10 @@
 import 'dart:developer';
 
+import 'package:collection/collection.dart';
 import 'package:drawer/item.dart';
-import 'package:drawer/selected.dart';
+import 'package:drawer/model_item.dart';
 import 'package:expandable/expandable.dart';
 import 'package:flutter/material.dart';
-import 'package:collection/collection.dart';
-import 'package:flutter/scheduler.dart';
 
 void main() {
   runApp(const MyApp());
@@ -95,41 +94,67 @@ class _MyHomePageState extends State<MyHomePage>
 
   double get _offsetX => 48 * _fraction;
 
-  List data = ['1', '2', '3', '4', '5'];
+  List data = [
+    ModelItem(
+      title: 'Home',
+      iconData: Icons.home,
+      onClick: () => log('Home'),
+    ),
+    ModelItem(
+      title: 'Music',
+      iconData: Icons.music_note,
+      onClick: () => log('Music'),
+    ),
+    ModelItem(
+      title: 'Setting',
+      iconData: Icons.settings,
+      onClick: () => log('Setting'),
+    ),
+    ModelItem(
+        title: 'Wifi',
+        iconData: Icons.wifi,
+        onClick: () => log('Wifi'),
+        listSubMenu: [
+          ModelItem(
+            title: 'Wifi 1',
+            iconData: Icons.wifi_lock,
+            onClick: () => log('Wifi 1'),
+          ),
+          ModelItem(
+            title: 'Wifi 2',
+            iconData: Icons.wifi_find,
+            onClick: () => log('Wifi 2'),
+          ),
+        ]),
+    ModelItem(
+      title: 'Account',
+      iconData: Icons.account_box,
+      onClick: () => log('Account'),
+    ),
+  ];
   int indexSelected = 0;
   late GlobalKey globalKeySelected;
   late RenderBox box;
-  late Offset position ;
+  late Offset position;
+
   double heightSelected = 24;
-  double offSetY= 0;
+  double offSetY = 0;
 
   List<ExpandableController> expandableControllerList = [];
   List<GlobalKey> globalKeyList = [];
 
   Widget get drawer => Container(
-        margin: EdgeInsets.all(16),
-        padding: EdgeInsets.zero,
         height: height,
         width: _currWidth,
-        decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.5),
-                blurRadius: 4,
-                spreadRadius: 0.01,
-                offset: Offset(0, 0),
-              ),
-            ]),
+        color: Colors.black54,
         child: Stack(
           children: [
-            Selected(
-                height: heightSelected,
-                offsetY:offSetY,
-                color: Colors.black,
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.fastLinearToSlowEaseIn),
+            // Selected(
+            //     height: heightSelected,
+            //     offsetY: offSetY,
+            //     color: Colors.black,
+            //     duration: const Duration(milliseconds: 300),
+            //     curve: Curves.fastLinearToSlowEaseIn),
             Column(
               mainAxisAlignment: MainAxisAlignment.start,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -143,25 +168,34 @@ class _MyHomePageState extends State<MyHomePage>
         ),
       );
 
-  Widget item(int index, dynamic element) {
+  Widget item(int index, ModelItem element) {
     return Item(
       isCollapsed: _isCollapsed,
       fraction: _fraction,
       offsetX: _offsetX,
       expandableController: expandableControllerList[index],
-      globalKey: globalKeyList[index],
-      onPress: () {
+      //globalKey: globalKeyList[index],
+      isSelected: indexSelected == index,
+      iconData: element.iconData,
+      title: element.title,
+      subMenuList: element.listSubMenu,
+      onPress: () => element.onClick.call(),
+      onHover: () {
         setState(() {
           indexSelected = index;
-          globalKeySelected = globalKeyList[index];
-          box =
-              globalKeySelected.currentContext?.findRenderObject() as RenderBox;
-          position = box.localToGlobal(Offset.zero);
-          heightSelected = box.size.height;
-          offSetY=position.dy -12;
         });
       },
     );
+  }
+
+  void setPositionSelected(int index) {
+    // indexSelected = index;
+    // globalKeySelected = globalKeyList[index];
+    // box =
+    // globalKeySelected.currentContext?.findRenderObject() as RenderBox;
+    // position = box.localToGlobal(Offset.zero);
+    // heightSelected = box.size.height;
+    // offSetY = position.dy - 12;
   }
 
   void _animateTo(double endWidth) {

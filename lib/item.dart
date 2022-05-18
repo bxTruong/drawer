@@ -1,20 +1,27 @@
 import 'dart:developer';
 
+import 'package:drawer/model_item.dart';
 import 'package:expandable/expandable.dart';
 import 'package:flutter/material.dart';
+import 'package:collection/collection.dart';
 
 class Item extends StatefulWidget {
   final bool isCollapsed;
+  final bool isSelected;
+  final Color colorIcon;
+  final Color colorIconSelected;
   final double fraction;
   final double offsetX;
-  final ExpandableController expandableController;
-  final Function onPress;
   final double? sizeIcon;
-  final String? title;
-  final Color? colorIcon;
-  final IconData? iconData;
-  final GlobalKey? globalKey;
+  final ExpandableController expandableController;
+  final List<ModelItem>? subMenuList;
+  final Function onPress;
+  final Function onHover;
+  final String title;
+  final IconData iconData;
+  final TextStyle? textStyle;
 
+  //final GlobalKey? globalKey;
 
   const Item({
     Key? key,
@@ -23,10 +30,16 @@ class Item extends StatefulWidget {
     required this.offsetX,
     required this.expandableController,
     required this.onPress,
+    required this.iconData,
+    required this.title,
+    required this.isSelected,
+    required this.onHover,
     this.sizeIcon,
-    this.title,
-    this.colorIcon,
-    this.iconData, this.globalKey,
+    this.colorIcon = Colors.grey,
+    this.subMenuList,
+    this.colorIconSelected = Colors.blue,
+    this.textStyle,
+    //this.globalKey,
   }) : super(key: key);
 
   @override
@@ -40,25 +53,21 @@ class _ItemState extends State<Item> {
   OverlayEntry? overlayEntry;
   OverlayEntry? overlayEntry2;
   bool showOverlay = false;
-
-  List<Widget> widgets = [
-    Container(height: 40, width: 60, color: Colors.transparent),
-    Container(
-      height: 300,
-      width: 300,
-      color: Colors.green,
-      child: TextButton(
-        child: Text('Click Me'),
-        onPressed: () {
-          print('Clicked');
-        },
-      ),
-    ),
-  ];
+  GlobalKey globalKey = GlobalKey();
+  Widget? submenu;
+  bool isUnderLineTex = false;
+  bool isHoverExpanl=true;
 
   @override
   void initState() {
     super.initState();
+    if (widget.subMenuList != null) {
+      submenu = Column(
+        children: widget.subMenuList!.mapIndexed((i, e) {
+          return itemSubMenu(i, e);
+        }).toList(),
+      );
+    }
     textButtonFocusNode.addListener(() {
       if (textButtonFocusNode.hasFocus) {
         _showOverlay(context, 0);
@@ -68,9 +77,67 @@ class _ItemState extends State<Item> {
     });
   }
 
+  Widget itemSubMenu(int index, ModelItem element) {
+    return Column(
+      children: [
+        SizedBox(
+          height: index == 0 ? 8 : 0,
+        ),
+        SizedBox(
+          width: double.infinity,
+          child: TextButton(
+            style: ButtonStyle(
+              splashFactory: NoSplash.splashFactory,
+              overlayColor:
+                  MaterialStateColor.resolveWith((states) => Colors.black12),
+            ),
+            onPressed: () => element.onClick.call(),
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Row(
+                children: [
+                  SizedBox(
+                      width:
+                          widget.sizeIcon != null ? widget.sizeIcon! + 56 : 56),
+                  Icon(
+                    element.iconData,
+                    color: isHoverExpanl
+                        ? widget.colorIconSelected
+                        : widget.colorIcon,
+                  ),
+                  const SizedBox(
+                    width: 8,
+                  ),
+                  Text(
+                    element.title,
+                    style: widget.textStyle ??
+                        TextStyle(
+                            color: isHoverExpanl
+                                ? widget.colorIconSelected
+                                : widget.colorIcon,
+                            decoration:
+                            isHoverExpanl ? TextDecoration.underline : null),
+                  ),
+                ],
+              ),
+            ),
+            onHover: (value){
+              setState(() {
+                isHoverExpanl = value;
+              });
+
+              log('Hover');
+            },
+          ),
+        ),
+        const SizedBox(height: 8),
+      ],
+    );
+  }
+
   void _showOverlay(BuildContext context, int index) async {
     overlayState = Overlay.of(context)!;
-    RenderBox box = widget.globalKey?.currentContext?.findRenderObject() as RenderBox;
+    RenderBox box = globalKey.currentContext?.findRenderObject() as RenderBox;
 
     overlayEntry = OverlayEntry(
         maintainState: true,
@@ -80,19 +147,17 @@ class _ItemState extends State<Item> {
             child: CompositedTransformFollower(
               link: layerLink,
               showWhenUnlinked: false,
-              offset: Offset(0, 0),
+              offset: const Offset(0, 0),
               child: TextButton(
-                onPressed: () {widget.onPress.call();},
-                onHover: (val) {
-                  if (widget.isCollapsed) {
-                    if (val && showOverlay) {
-                      textButtonFocusNode.requestFocus();
-                    } else {
-                      textButtonFocusNode.unfocus();
-                    }
-                  }
-                },
-                child: widgets[index],
+                style: ButtonStyle(
+                  splashFactory: NoSplash.splashFactory,
+                  overlayColor: MaterialStateColor.resolveWith(
+                      (states) => Colors.black12),
+                ),
+                onPressed: () => widget.onPress.call(),
+                onHover: (value) => onHoverOverlay(value),
+                child:
+                    Container(height: 40, width: 60, color: Colors.transparent),
               ),
             ),
           );
@@ -102,21 +167,27 @@ class _ItemState extends State<Item> {
         maintainState: true,
         builder: (context) {
           return Positioned(
-            height: box.size.height,
+            top: 0,
+            left: 0,
             child: CompositedTransformFollower(
               link: layerLink,
               showWhenUnlinked: false,
-              offset: Offset(box.size.width, 0),
+              offset: Offset(box.size.width - 8, 0),
               child: TextButton(
+                style: ButtonStyle(
+                  splashFactory: NoSplash.splashFactory,
+                  overlayColor: MaterialStateColor.resolveWith(
+                      (states) => Colors.black12),
+                ),
                 onPressed: () {},
-                onHover: (val) {
-                  if (val && showOverlay) {
-                    textButtonFocusNode.requestFocus();
-                  } else {
-                    textButtonFocusNode.unfocus();
-                  }
-                },
-                child: widgets[index + 1],
+                onHover: (value) => onHoverOverlay(value),
+                child: submenu != null
+                    ? Container(
+                        padding: const EdgeInsets.all(8),
+                        color: Colors.red,
+                        child: submenu,
+                      )
+                    : Container(),
               ),
             ),
           );
@@ -133,53 +204,47 @@ class _ItemState extends State<Item> {
 
   @override
   Widget build(BuildContext context) {
-    return CompositedTransformTarget(
-      key: widget.globalKey,
-      link: layerLink,
-      child: ExpandablePanel(
-        controller: widget.expandableController,
-        header: TextButton(
-          focusNode: textButtonFocusNode,
-          onPressed: () {
-            widget.onPress.call();
-            setState(() {
-              if (!widget.isCollapsed) {
-                widget.expandableController.expanded =
-                    !widget.expandableController.expanded;
-              }
-            });
-          },
-          onHover: (value) {
-            if (widget.isCollapsed) {
-              if (value) {
-                textButtonFocusNode.requestFocus();
-                showOverlay = true;
-              }
-            }
-          },
-          child: Container(
-            decoration: BoxDecoration(
-             // color: Colors.black,
-              borderRadius: BorderRadius.circular(10)
+    return Padding(
+      padding: const EdgeInsets.only(top: 28.0),
+      child: CompositedTransformTarget(
+        key: globalKey,
+        link: layerLink,
+        child: ExpandablePanel(
+          controller: widget.expandableController,
+          header: TextButton(
+            style: ButtonStyle(
+              splashFactory: NoSplash.splashFactory,
+              overlayColor:
+                  MaterialStateColor.resolveWith((states) => Colors.black12),
             ),
-            padding: const EdgeInsets.only(left: 12,top: 12,bottom: 12),
-            child: Stack(
-              children: [
-                Icon(
-                  Icons.home,
-                  size: 24,
-                ),
-                _title
-              ],
+            focusNode: textButtonFocusNode,
+            onPressed: onPress,
+            onHover: onHover,
+            child: Container(
+              decoration: BoxDecoration(
+                  // color: Colors.black,
+                  borderRadius: BorderRadius.circular(10)),
+              padding: const EdgeInsets.only(left: 12, top: 12, bottom: 12),
+              child: Stack(
+                children: [
+                  Icon(
+                    widget.iconData,
+                    color: widget.isSelected
+                        ? widget.colorIconSelected
+                        : widget.colorIcon,
+                    size: 24,
+                  ),
+                  _title
+                ],
+              ),
             ),
           ),
-        ),
-        expanded: Container(width: 100, height: 50, color: Colors.red),
-        collapsed: Container(),
-        theme: const ExpandableThemeData(
-          animationDuration: Duration(milliseconds: 500),
-          hasIcon: false,
-          bodyAlignment: ExpandablePanelBodyAlignment.right,
+          expanded: submenu ?? Container(),
+          collapsed: Container(),
+          theme: const ExpandableThemeData(
+            animationDuration: Duration(milliseconds: 500),
+            hasIcon: false,
+          ),
         ),
       ),
     );
@@ -194,12 +259,48 @@ class _ItemState extends State<Item> {
             child: SizedBox(
               width: double.infinity,
               child: Text(
-                "HElllo",
-                softWrap: false,
-                overflow: TextOverflow.fade,
+                widget.title,
+                style: widget.textStyle ??
+                    TextStyle(
+                        color: widget.isSelected
+                            ? widget.colorIconSelected
+                            : widget.colorIcon,
+                        decoration:
+                            isUnderLineTex ? TextDecoration.underline : null),
               ),
             ),
           ),
         ),
       );
+
+  void onHover(value) {
+    if (widget.isCollapsed) {
+      if (value) {
+        textButtonFocusNode.requestFocus();
+        showOverlay = true;
+      }
+    }
+    isUnderLineTex = value;
+    widget.onHover.call();
+  }
+
+  void onPress() {
+    widget.onPress.call();
+    setState(() {
+      if (!widget.isCollapsed) {
+        widget.expandableController.expanded =
+            !widget.expandableController.expanded;
+      }
+    });
+  }
+
+  void onHoverOverlay(value) {
+    if (widget.isCollapsed) {
+      if (value && showOverlay) {
+        textButtonFocusNode.requestFocus();
+      } else {
+        textButtonFocusNode.unfocus();
+      }
+    }
+  }
 }

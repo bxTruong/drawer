@@ -1,16 +1,18 @@
 import 'package:flutter/cupertino.dart';
 
 class ModelItem {
-  String? title;
+  String title;
   String? iconCustom;
-  IconData? iconData;
-  List<Widget>? listSubMenu;
-  bool? isChecked;
+  IconData iconData;
+  List<ModelItem>? listSubMenu;
+  bool? isChecked =false;
+  Function onClick;
 
   ModelItem({
-    this.title,
+    required this.title,
+    required this.onClick,
+    required this.iconData,
     this.iconCustom,
-    this.iconData,
     this.listSubMenu,
     this.isChecked,
   });
