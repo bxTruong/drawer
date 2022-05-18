@@ -1,9 +1,11 @@
 import 'dart:developer';
 
 import 'package:drawer/item.dart';
+import 'package:drawer/selected.dart';
 import 'package:expandable/expandable.dart';
 import 'package:flutter/material.dart';
 import 'package:collection/collection.dart';
+import 'package:flutter/scheduler.dart';
 
 void main() {
   runApp(const MyApp());
@@ -84,7 +86,9 @@ class _MyHomePageState extends State<MyHomePage>
 
     data.forEach((element) {
       expandableControllerList.add(ExpandableController());
+      globalKeyList.add(GlobalKey());
     });
+    globalKeySelected = globalKeyList[indexSelected];
   }
 
   double get _fraction => (_currWidth - minWidth) / _delta;
@@ -92,7 +96,15 @@ class _MyHomePageState extends State<MyHomePage>
   double get _offsetX => 48 * _fraction;
 
   List data = ['1', '2', '3', '4', '5'];
+  int indexSelected = 0;
+  late GlobalKey globalKeySelected;
+  late RenderBox box;
+  late Offset position ;
+  double heightSelected = 24;
+  double offSetY= 0;
+
   List<ExpandableController> expandableControllerList = [];
+  List<GlobalKey> globalKeyList = [];
 
   Widget get drawer => Container(
         margin: EdgeInsets.all(16),
@@ -110,19 +122,47 @@ class _MyHomePageState extends State<MyHomePage>
                 offset: Offset(0, 0),
               ),
             ]),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.start,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: data
-              .mapIndexed((i, e) => Item(
-                    isCollapsed: _isCollapsed,
-                    fraction: _fraction,
-                    offsetX: _offsetX,
-                    expandableController: expandableControllerList[i],
-                  ))
-              .toList(),
+        child: Stack(
+          children: [
+            Selected(
+                height: heightSelected,
+                offsetY:offSetY,
+                color: Colors.black,
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.fastLinearToSlowEaseIn),
+            Column(
+              mainAxisAlignment: MainAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: data
+                  .mapIndexed(
+                    (i, e) => item(i, e),
+                  )
+                  .toList(),
+            ),
+          ],
         ),
       );
+
+  Widget item(int index, dynamic element) {
+    return Item(
+      isCollapsed: _isCollapsed,
+      fraction: _fraction,
+      offsetX: _offsetX,
+      expandableController: expandableControllerList[index],
+      globalKey: globalKeyList[index],
+      onPress: () {
+        setState(() {
+          indexSelected = index;
+          globalKeySelected = globalKeyList[index];
+          box =
+              globalKeySelected.currentContext?.findRenderObject() as RenderBox;
+          position = box.localToGlobal(Offset.zero);
+          heightSelected = box.size.height;
+          offSetY=position.dy -12;
+        });
+      },
+    );
+  }
 
   void _animateTo(double endWidth) {
     _widthAnimation = Tween<double>(

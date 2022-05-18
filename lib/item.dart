@@ -8,10 +8,13 @@ class Item extends StatefulWidget {
   final double fraction;
   final double offsetX;
   final ExpandableController expandableController;
+  final Function onPress;
   final double? sizeIcon;
   final String? title;
   final Color? colorIcon;
   final IconData? iconData;
+  final GlobalKey? globalKey;
+
 
   const Item({
     Key? key,
@@ -19,10 +22,11 @@ class Item extends StatefulWidget {
     required this.fraction,
     required this.offsetX,
     required this.expandableController,
+    required this.onPress,
     this.sizeIcon,
     this.title,
     this.colorIcon,
-    this.iconData,
+    this.iconData, this.globalKey,
   }) : super(key: key);
 
   @override
@@ -36,10 +40,9 @@ class _ItemState extends State<Item> {
   OverlayEntry? overlayEntry;
   OverlayEntry? overlayEntry2;
   bool showOverlay = false;
-  GlobalKey globalKey = GlobalKey();
 
   List<Widget> widgets = [
-    Container(height: 40, width: 60, color: Colors.red),
+    Container(height: 40, width: 60, color: Colors.transparent),
     Container(
       height: 300,
       width: 300,
@@ -67,7 +70,7 @@ class _ItemState extends State<Item> {
 
   void _showOverlay(BuildContext context, int index) async {
     overlayState = Overlay.of(context)!;
-    RenderBox box = globalKey.currentContext?.findRenderObject() as RenderBox;
+    RenderBox box = widget.globalKey?.currentContext?.findRenderObject() as RenderBox;
 
     overlayEntry = OverlayEntry(
         maintainState: true,
@@ -79,7 +82,7 @@ class _ItemState extends State<Item> {
               showWhenUnlinked: false,
               offset: Offset(0, 0),
               child: TextButton(
-                onPressed: () {},
+                onPressed: () {widget.onPress.call();},
                 onHover: (val) {
                   if (widget.isCollapsed) {
                     if (val && showOverlay) {
@@ -131,13 +134,14 @@ class _ItemState extends State<Item> {
   @override
   Widget build(BuildContext context) {
     return CompositedTransformTarget(
-      key: globalKey,
+      key: widget.globalKey,
       link: layerLink,
       child: ExpandablePanel(
         controller: widget.expandableController,
         header: TextButton(
           focusNode: textButtonFocusNode,
           onPressed: () {
+            widget.onPress.call();
             setState(() {
               if (!widget.isCollapsed) {
                 widget.expandableController.expanded =
@@ -155,7 +159,7 @@ class _ItemState extends State<Item> {
           },
           child: Container(
             decoration: BoxDecoration(
-              color: Colors.black,
+             // color: Colors.black,
               borderRadius: BorderRadius.circular(10)
             ),
             padding: const EdgeInsets.only(left: 12,top: 12,bottom: 12),
